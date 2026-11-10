@@ -1,0 +1,61 @@
+{
+  "name": "vantiqor",
+  "version": "0.12.0",
+  "description": "VANTIQOR \u2014 AI-assisted multi-asset trading workspace",
+  "license": "MIT",
+  "author": "Clawtrade",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Paparusi/Clawtrade"
+  },
+  "keywords": [
+    "trading",
+    "ai",
+    "agent",
+    "crypto",
+    "forex",
+    "stocks",
+    "defi",
+    "binance",
+    "bybit",
+    "metatrader",
+    "interactive-brokers",
+    "uniswap",
+    "hyperliquid"
+  ],
+  "type": "module",
+  "bin": {
+    "clawtrade": "bin/cli.mjs"
+  },
+  "files": [
+    "bin/cli.mjs",
+    "scripts/",
+    "cmd/",
+    "internal/",
+    "config/default.yaml",
+    "go.mod",
+    "go.sum",
+    "Makefile",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.mjs",
+    "build": "node scripts/build.mjs",
+    "dev": "cd web && npm run dev",
+    "start": "node bin/cli.mjs serve",
+    "test": "cd web && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

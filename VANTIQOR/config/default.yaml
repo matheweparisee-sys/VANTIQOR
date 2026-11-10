@@ -1,0 +1,58 @@
+server:
+    host: 127.0.0.1
+    port: 8899
+database:
+    path: data/vantiqor.db
+vault:
+    path: data/vault.enc
+risk:
+    max_risk_per_trade: 0.02
+    max_daily_loss: 0.05
+    max_positions: 5
+    max_leverage: 10
+    default_mode: paper
+exchanges: []
+agent:
+    enabled: true
+    auto_trade: false
+    confirmation: true
+    min_confidence: 0.7
+    scan_interval: 30
+    watchlist:
+        - BTC/USDT
+        - ETH/USDT
+    sub_agents:
+        - market-scanner
+        - risk-manager
+        - portfolio-optimizer
+        - news-analyst
+        - execution-engine
+    model:
+        primary: ""
+        max_tokens: 4096
+        temperature: 0.7
+mcp:
+    servers: []
+    # Example MCP server config:
+    # servers:
+    #   - name: news-sentiment
+    #     command: python
+    #     args: [mcp_news_server.py]
+    #     enabled: true
+    #   - name: custom-indicators
+    #     command: node
+    #     args: [indicator-server.js]
+    #     enabled: true
+notifications:
+    telegram:
+        enabled: false
+        token: ""
+        chat_id: ""
+    discord:
+        enabled: false
+        webhook_url: ""
+    alerts:
+        trade_executed: true
+        risk_alert: true
+        pnl_update: false
+        system_alert: true

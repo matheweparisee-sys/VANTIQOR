@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vantiqor
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/v1/system/health
+    disk:
+      name: vantiqor-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8080"

@@ -1,0 +1,24 @@
+# Go binaries (keep bin/cli.mjs for npm)
+bin/clawtrade
+bin/clawtrade.exe
+bin/clawtrade-*
+
+# Data
+data/
+*.db
+*.enc
+*.chain
+vault.enc
+
+# Node
+node_modules/
+dist/
+.env
+
+# Screenshots / temp
+*.exe~
+.playwright-mcp/
+
+# OS
+.DS_Store
+Thumbs.db
