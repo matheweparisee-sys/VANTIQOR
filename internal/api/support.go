@@ -110,6 +110,8 @@ func (s *Server) handleCreateDepositApplication(w http.ResponseWriter, r *http.R
 		writeJSON(w, 400, map[string]string{"error": "invalid request"})
 		return
 	}
+	u := r.Context().Value(userKey{}).(authUser)
+	req.Name, req.Email = u.Name, u.Email
 	req.Currency = strings.ToUpper(strings.TrimSpace(req.Currency))
 	req.Method = strings.TrimSpace(req.Method)
 	if !validCustomer(req.Name, req.Email) || req.Amount < 1 || req.Amount > 100000000 || req.Currency != "USD" || (req.Method != "Bank transfer" && req.Method != "Crypto" && req.Method != "Other") || len(req.Message) > 2000 {
