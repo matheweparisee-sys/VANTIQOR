@@ -27,6 +27,7 @@ import (
 )
 
 type Server struct {
+	db       *sql.DB
 	router   chi.Router
 	cfg      *config.Config
 	bus      *engine.EventBus
@@ -50,8 +51,13 @@ func (s *Server) SetAlertService(svc interface{}) {
 	}
 }
 
-func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audit *security.AuditLog, adapters map[string]adapter.TradingAdapter, riskEngine *risk.Engine, db *sql.DB) *Server {
+func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audit *security.AuditLog, adapters map[string]adapter.TradingAdapter, riskEngine *risk.Engine, databases ...*sql.DB) *Server {
+	var db *sql.DB
+	if len(databases) > 0 {
+		db = databases[0]
+	}
 	s := &Server{
+		db:       db,
 		cfg:      cfg,
 		bus:      bus,
 		memory:   mem,
@@ -62,11 +68,12 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(s.sameOriginWrites)
 	r.Use(middleware.Timeout(120 * time.Second))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Admin-Key", "X-Support-Token"},
 	}))
 
 	ag := agent.New(cfg, adapters, riskEngine, mem, bus, db)
@@ -90,6 +97,9 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 		}
 	}
 
+	if err := s.initAuth(); err != nil {
+		panic(fmt.Errorf("initialize investor authentication: %w", err))
+	}
 	s.ag = ag
 
 	llm := NewLLMHandler(ag)
@@ -112,33 +122,54 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/system/health", s.handleHealth)
+		r.Post("/auth/signup", s.handleSignup)
+		r.Post("/auth/login", s.handleLogin)
+		r.Post("/auth/logout", s.handleLogout)
+		r.Get("/auth/me", s.requireInvestor(s.handleMe))
+		r.Get("/my/deposit-applications", s.requireInvestor(s.handleMyDeposits))
 		r.Get("/system/version", s.handleVersion)
-		r.Post("/chat", llm.HandleChat)
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Post("/chat", s.requireInvestor(llm.HandleChat))
+
+		// Customer deposit applications and support conversations.
+		r.Post("/deposit-applications", s.requireInvestor(s.handleCreateDepositApplication))
+		r.Post("/support/threads", s.handleCreateSupportThread)
+		r.Get("/support/threads/{id}/messages", s.handleGetCustomerMessages)
+		r.Post("/support/threads/{id}/messages", s.handlePostCustomerMessage)
+
+		// Admin endpoints require ADMIN_API_KEY in the request header.
+		r.Get("/admin/support/threads", s.requireAdmin(s.handleAdminListThreads))
+		r.Get("/admin/support/threads/{id}/messages", s.requireAdmin(s.handleAdminGetMessages))
+		r.Post("/admin/support/threads/{id}/messages", s.requireAdmin(s.handleAdminPostMessage))
+		r.Patch("/admin/support/threads/{id}", s.requireAdmin(s.handleAdminUpdateThread))
+		r.Get("/admin/deposit-applications", s.requireAdmin(s.handleAdminListDeposits))
+		r.Patch("/admin/deposit-applications/{id}", s.requireAdmin(s.handleAdminUpdateDeposit))
 
 		// Portfolio (aggregated across all exchanges)
-		r.Get("/portfolio", s.handleGetPortfolio)
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Get("/portfolio", s.requireInvestor(s.handleGetPortfolio))
 
 		// Exchange data
 		r.Get("/price", s.handleGetPrice)
 		r.Get("/candles", s.handleGetCandles)
 		r.Get("/orderbook", s.handleGetOrderBook)
-		r.Get("/balances", s.handleGetBalances)
-		r.Get("/positions", s.handleGetPositions)
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Get("/balances", s.requireInvestor(s.handleGetBalances))
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Get("/positions", s.requireInvestor(s.handleGetPositions))
 		r.Get("/exchanges", s.handleListExchanges)
 
 		// Backtesting
-		r.Post("/backtest", s.handleBacktest)
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Post("/backtest", s.requireInvestor(s.handleBacktest))
 
 		// Sub-agent management
-		r.Get("/agents", s.handleListAgents)
-		r.Get("/agents/events", s.handleAgentEvents)
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Get("/agents", s.requireInvestor(s.handleListAgents))
+		// Shared trading data is disabled for investor accounts until tenant isolation: r.Get("/agents/events", s.requireInvestor(s.handleAgentEvents))
 	})
 
 	// WebSocket endpoint
-	r.Get("/ws", hub.HandleWebSocket)
+	// Disabled until per-investor WebSocket authorization and event filtering exist.
+	// r.Get("/ws", hub.HandleWebSocket)
 
 	// Serve the VANTIQOR web dashboard when the frontend has been built.
 	// API and WebSocket routes above take precedence over this static fallback.
+	r.Get("/admin", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "web/dist/index.html") })
 	r.Handle("/*", http.FileServer(http.Dir("web/dist")))
 
 	s.router = r
