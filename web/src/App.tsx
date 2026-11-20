@@ -25,7 +25,7 @@ export default function App() {
   return window.location.pathname.replace(/\/$/, '') === '/admin' ? <AdminPortal /> : <InvestorPortal />
 }
 
-function LegacyTradingDashboard() {
+export function LegacyTradingDashboard() {
   const [tab, setTab] = useState('dashboard')
   return (
     <div className="flex h-screen w-screen bg-[var(--bg-0)] text-[var(--text-2)] overflow-hidden">
