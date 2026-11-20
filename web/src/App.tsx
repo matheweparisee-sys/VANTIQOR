@@ -1,3 +1,5 @@
+import InvestorPortal from './InvestorPortal'
+import AdminPortal from './AdminPortal'
 import { useState } from 'react'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
@@ -17,10 +19,14 @@ import AssetAllocation from './components/AssetAllocation'
 import MonthlyReturns from './components/MonthlyReturns'
 import TopMovers from './components/TopMovers'
 import DrawdownChart from './components/DrawdownChart'
+import FundingSupport from './components/FundingSupport'
 
 export default function App() {
-  const [tab, setTab] = useState('dashboard')
+  return window.location.pathname.replace(/\/$/, '') === '/admin' ? <AdminPortal /> : <InvestorPortal />
+}
 
+function LegacyTradingDashboard() {
+  const [tab, setTab] = useState('dashboard')
   return (
     <div className="flex h-screen w-screen bg-[var(--bg-0)] text-[var(--text-2)] overflow-hidden">
       <TradeToast />
@@ -43,6 +49,7 @@ export default function App() {
           {tab === 'analytics' && <AnalyticsView />}
           {tab === 'strategies' && <StrategiesPlaceholder />}
           {tab === 'settings' && <SettingsPanel />}
+          {tab === 'funding' && <FundingSupport />}
         </main>
         <StatusBar />
       </div>
