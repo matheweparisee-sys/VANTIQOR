@@ -50,13 +50,8 @@ func (s *Server) SetAlertService(svc interface{}) {
 	}
 }
 
-func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audit *security.AuditLog, adapters map[string]adapter.TradingAdapter, riskEngine *risk.Engine, databases ...*sql.DB) *Server {
-	var db *sql.DB
-	if len(databases) > 0 {
-		db = databases[0]
-	}
+func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audit *security.AuditLog, adapters map[string]adapter.TradingAdapter, riskEngine *risk.Engine, db *sql.DB) *Server {
 	s := &Server{
-		db:       db,
 		cfg:      cfg,
 		bus:      bus,
 		memory:   mem,
@@ -70,8 +65,8 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 	r.Use(middleware.Timeout(120 * time.Second))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Admin-Key", "X-Support-Token"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	}))
 
 	ag := agent.New(cfg, adapters, riskEngine, mem, bus, db)
@@ -119,20 +114,6 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 		r.Get("/system/health", s.handleHealth)
 		r.Get("/system/version", s.handleVersion)
 		r.Post("/chat", llm.HandleChat)
-
-		// Customer deposit applications and support conversations.
-		r.Post("/deposit-applications", s.handleCreateDepositApplication)
-		r.Post("/support/threads", s.handleCreateSupportThread)
-		r.Get("/support/threads/{id}/messages", s.handleGetCustomerMessages)
-		r.Post("/support/threads/{id}/messages", s.handlePostCustomerMessage)
-
-		// Admin endpoints require ADMIN_API_KEY in the request header.
-		r.Get("/admin/support/threads", s.requireAdmin(s.handleAdminListThreads))
-		r.Get("/admin/support/threads/{id}/messages", s.requireAdmin(s.handleAdminGetMessages))
-		r.Post("/admin/support/threads/{id}/messages", s.requireAdmin(s.handleAdminPostMessage))
-		r.Patch("/admin/support/threads/{id}", s.requireAdmin(s.handleAdminUpdateThread))
-		r.Get("/admin/deposit-applications", s.requireAdmin(s.handleAdminListDeposits))
-		r.Patch("/admin/deposit-applications/{id}", s.requireAdmin(s.handleAdminUpdateDeposit))
 
 		// Portfolio (aggregated across all exchanges)
 		r.Get("/portfolio", s.handleGetPortfolio)
