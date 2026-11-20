@@ -102,8 +102,6 @@ func NewServer(cfg *config.Config, bus *engine.EventBus, mem *memory.Store, audi
 	}
 	s.ag = ag
 
-	llm := NewLLMHandler(ag)
-
 	// WebSocket hub for real-time data
 	hub := NewHub()
 	go hub.Run()
